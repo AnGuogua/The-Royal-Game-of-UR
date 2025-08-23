@@ -60,8 +60,16 @@ Play a two-thousand-year old board game on your android phone!
 2.用android studio打开此项目
 
 测试环境：
+
 Windows11+Android Studio Koala 2024.1.1 Patch2
 
 真机测试：鸿蒙4.1（Android12）
 
 虚拟机测试：Android API 35
+
+# TODO
+重构代码
+
+兼容各种尺寸的设备（包括小窗口模式）
+
+优化界面显示（更美观）
