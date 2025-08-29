@@ -1,5 +1,6 @@
 # The Royal Game of UR
-Play a two-thousand-year old board game on your android phone!
+在手机上玩两千年前的棋类游戏
+
 ## 规则
 
 ### 棋盘
@@ -16,7 +17,7 @@ Play a two-thousand-year old board game on your android phone!
 
 每位玩家有 7 枚棋子。
 
-使用 四面骰子（角上标记 0 或 1），四个骰子掷出后，计算朝上的点数，总和为 0–4。
+点击“Roll”按钮，上方的数字代表玩家本轮的点数。
 
 ### 基本规则
 
@@ -29,6 +30,10 @@ Play a two-thousand-year old board game on your android phone!
 从棋盘外进入棋盘（点数对应的格子）
 
 或在棋盘上前进对应点数
+
+若无法前进，则本轮跳过。
+
+在可移动的情况下，玩家必须移动一枚棋子
 
 #### 移动方向
 
@@ -51,25 +56,25 @@ Play a two-thousand-year old board game on your android phone!
 先将所有棋子沿路线走完并移出棋盘的玩家获胜。
 
 ## 关于这款游戏
+
 这只是一个用来练手的处于beta版的小游戏，界面不够美观，且功能不够完善，如果发现bug，请在issue中提出。
+
 ## 开发
-开发流程：
 
-1.克隆本项目到您的磁盘
+### 开发流程：
 
-2.用android studio打开此项目
+1. 克隆本项目到您的磁盘
 
-测试环境：
+2. 用android studio打开此项目
 
-Windows11+Android Studio Koala 2024.1.1 Patch2
+### 测试环境：
 
-真机测试：鸿蒙4.1（Android12）
-
-虚拟机测试：Android API 35
+- Windows11+Android Studio Koala 2024.1.1 Patch2
+- 真机测试：鸿蒙4.1（Android12）
+- 虚拟机测试：Android API 35
 
 # TODO
-重构代码
 
-兼容各种尺寸的设备（包括小窗口模式）
-
-优化界面显示（更美观）
+- 重构代码
+- 兼容各种尺寸的设备（包括小窗口模式）
+- 优化界面显示（更美观）
