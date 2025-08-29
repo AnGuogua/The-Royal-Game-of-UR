@@ -23,6 +23,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -43,6 +44,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.guogua.ur.ui.theme.TheRoyalGameOfURTheme
+import kotlinx.coroutines.delay
 import kotlin.random.Random
 
 class MainActivity : ComponentActivity() {
@@ -63,7 +65,8 @@ class MainActivity : ComponentActivity() {
 
 enum class GameStep {
     //游戏阶段
-    GAME_START, DICE_ROLLED, WAITING_MOVE, REPAINTING
+    GAME_START, DICE_ROLLED, REPAINTING, NO_MOVE
+    //分别是游戏开始（还没摇色子）、摇完色子、正在重绘（没有结算）、无法移动（显示NO MOVE）
 }
 
 data class GameState(
@@ -123,6 +126,7 @@ class GameViewModel : ViewModel() {
         state = state.copy(r_pieces_left = r, b_pieces_left = b)
     }
 
+    //重置游戏
     fun resetGame() {
         state = GameState()
     }
@@ -155,7 +159,6 @@ fun All(modifier: Modifier = Modifier, gameViewModel: GameViewModel = viewModel(
 
 @Composable
 fun GameBoard(modifier: Modifier = Modifier, gameViewModel: GameViewModel) {
-    val game = gameViewModel.state
     Canvas(
         modifier = modifier.aspectRatio(8f / 3f)  // 固定宽高比 8:3
     ) {
@@ -254,7 +257,9 @@ fun Dice(modifier: Modifier = Modifier, gameViewModel: GameViewModel) {
                 else -> 0f
             }
         }) {
-        Column {
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ){
             //比分板
             Text(text = buildAnnotatedString {
                 withStyle(style = SpanStyle(color = Color.Red, fontSize = 20.sp)) {
@@ -266,6 +271,7 @@ fun Dice(modifier: Modifier = Modifier, gameViewModel: GameViewModel) {
                 withStyle(style = SpanStyle(color = Color.Blue, fontSize = 20.sp)) {
                     append("${gameViewModel.state.score_b}")
                 }
+
             })
             //摇色子的显示框
             Text(
@@ -298,9 +304,31 @@ fun Dice(modifier: Modifier = Modifier, gameViewModel: GameViewModel) {
                         gameViewModel.state.step == GameStep.GAME_START && gameViewModel.state.currentPlayer == 2 -> Color.Blue
                         else -> Color.Gray
                     }
-
                 )
             ) { Text("Roll") }
+            LaunchedEffect(gameViewModel.state.step) {
+                if(gameViewModel.state.step == GameStep.NO_MOVE)
+                {
+                    delay(1500)
+                    gameViewModel.nextPlayer()
+                    gameViewModel.rollDice(0)
+                    gameViewModel.setGamestep(GameStep.GAME_START)
+                }
+            }
+            //NO MOVE 文本框
+            if (gameViewModel.state.step == GameStep.NO_MOVE) {
+                Text(
+                    text = "No Move",
+                    fontSize = 24.sp,
+                    color = when (gameViewModel.state.currentPlayer) {
+                        1 -> Color.Red
+                        2 -> Color.Blue
+                        else -> Color.LightGray
+                    }
+                )
+            }
+
+
         }
     }
 }
@@ -311,11 +339,11 @@ fun Dice(modifier: Modifier = Modifier, gameViewModel: GameViewModel) {
 fun Pieces(modifier: Modifier = Modifier, gameViewModel: GameViewModel) {
     val red: MutableList<Boolean> = gameViewModel.state.pieces_r.toMutableList()
     val blue: MutableList<Boolean> = gameViewModel.state.pieces_b.toMutableList()
-    val highlight: MutableList<Boolean> = List(15) { false }.toMutableList()
+    var highlight: MutableList<Boolean> = MutableList(15) { false }
     var clickindex by remember {
         mutableIntStateOf(-1)
     }
-    var np: Int by remember {
+    var newPosition: Int by remember {
         mutableIntStateOf(-1)
     }
     var showDialog by remember { mutableStateOf(false) }
@@ -324,56 +352,17 @@ fun Pieces(modifier: Modifier = Modifier, gameViewModel: GameViewModel) {
     }
     //运算高亮部分
     if (gameViewModel.state.step == GameStep.DICE_ROLLED) {
-        var i: Int = 0
-        if (gameViewModel.state.currentPlayer == 1) {
-            for ((index, value) in red.withIndex()) {
-                if (value) {
-                    if (index + gameViewModel.state.dicenum > 14) {
-                        if (index + gameViewModel.state.dicenum == 15) {
-                            highlight[index] = true
-                            i++
-                        }
+        highlight = highlightPieces(gameViewModel)
 
-                        continue
-                    }
-                    if (!red[index + gameViewModel.state.dicenum]) {
-                        if (!(index + gameViewModel.state.dicenum == 8 && blue[8])) {
-                            highlight[index] = true
-                            i++
-                        }
-
-                    }
-                }
-
-            }
-        }
-        if (gameViewModel.state.currentPlayer == 2) {
-            for ((index, value) in blue.withIndex()) {
-                if (value) {
-                    if (index + gameViewModel.state.dicenum > 14) {
-                        if (index + gameViewModel.state.dicenum == 15) {
-                            highlight[index] = true
-                            i++
-                        }
-                        continue
-                    }
-                    if (!blue[index + gameViewModel.state.dicenum]) {
-                        if (!(index + gameViewModel.state.dicenum == 8 && red[8])) {
-                            highlight[index] = true
-                            i++
-                        }
-                    }
-                }
-
-            }
-        }
-        Log.d("GUOGUA", "$i")
-        if (i == 0 || gameViewModel.state.dicenum == 0) {
-            gameViewModel.nextPlayer()
-            gameViewModel.setGamestep(GameStep.GAME_START)
+        //如果摇到0或者没法移动，显示NO MOVE
+        if (highlight.all { !it } || gameViewModel.state.dicenum == 0) {
+            newPosition = -1
+            gameViewModel.setGamestep(GameStep.NO_MOVE)
             return
         }
+
     }
+
     Canvas(modifier = modifier
         .aspectRatio(8f / 3f)
         .pointerInput(Unit) {
@@ -412,176 +401,89 @@ fun Pieces(modifier: Modifier = Modifier, gameViewModel: GameViewModel) {
                         }
                     }
                 }
-                np = clickindex + gameViewModel.state.dicenum
-                if (np > 15) {
+
+                //计算移动
+                newPosition = clickindex + gameViewModel.state.dicenum
+                if (newPosition > 15) {
                     return@detectTapGestures
                 }
-                if (np == 15 && ((gameViewModel.state.currentPlayer == 1 && red[clickindex]) || (gameViewModel.state.currentPlayer == 2 && blue[clickindex]))) {
-                    if (gameViewModel.state.currentPlayer == 1) red[clickindex] =
-                        false else blue[clickindex] = false
-                    gameViewModel.movePiece(red, blue)
-                    gameViewModel.setGamestep(GameStep.REPAINTING)
+                else{
+                    movePiece(clickindex, newPosition, gameViewModel)
                 }
-                //计算是否可以移动
-                else if (gameViewModel.state.currentPlayer == 1 && red[clickindex] && !red[clickindex + gameViewModel.state.dicenum]) {
-                    if (!(clickindex + gameViewModel.state.dicenum == 8 && blue[8]) && clickindex + gameViewModel.state.dicenum in 0..15) {
-                        red[clickindex] = false
-                        if (np in 1..14) {
-                            red[np] = true
-                            if (clickindex == 0) {
-                                if (gameViewModel.state.r_pieces_left == 1) {
-                                    red[0] = false
-                                    gameViewModel.setPiecesleft(
-                                        0, gameViewModel.state.b_pieces_left
-                                    )
-                                } else {
-                                    red[0] = true
-                                }
-                            }
-                            if (np in 5..12 && blue[np]) {
-                                blue[np] = false
-                                if (!blue[0]) {
-                                    blue[0] = true
-                                }
-                                gameViewModel.setPiecesleft(
-                                    gameViewModel.state.r_pieces_left,
-                                    gameViewModel.state.b_pieces_left + 1
-                                )
-                            }
-                        }
-                        gameViewModel.movePiece(red, blue)
-                        gameViewModel.setGamestep(GameStep.REPAINTING)
-                    }
-                } else if (gameViewModel.state.currentPlayer == 2 && blue[clickindex] && !blue[clickindex + gameViewModel.state.dicenum]) {
-                    if (!(clickindex + gameViewModel.state.dicenum == 8 && red[8])) {
-                        blue[clickindex] = false
-                        if (np in 1..14) {
-                            blue[np] = true
-                            if (clickindex == 0) {
-                                if (gameViewModel.state.b_pieces_left == 1) {
-                                    blue[0] = false
-                                    gameViewModel.setPiecesleft(
-                                        gameViewModel.state.r_pieces_left, 0
-                                    )
-                                } else {
-                                    blue[0] = true
-                                }
-                            }
-                            if (np in 5..12 && red[np]) {
-                                red[np] = false
-                                if (!red[0]) {
-                                    red[0] = true
-                                }
-                                gameViewModel.setPiecesleft(
-                                    gameViewModel.state.r_pieces_left + 1,
-                                    gameViewModel.state.b_pieces_left
-                                )
-                            }
-                        }
-
-                        gameViewModel.movePiece(red, blue)
-                        gameViewModel.setGamestep(GameStep.REPAINTING)
-
-                    }
-                }
-
 
             }
         }
 
     ) {
+        //绘制红色的
         for ((index, value) in gameViewModel.state.pieces_r.withIndex()) {
+            var piecePosition: Offset
             if (value)//如果有棋子
             {
                 if (index in 0..4) {
-                    drawCircle(
-                        color = when {
-                            (gameViewModel.state.currentPlayer == 2 || !highlight[index]) -> Color.Red
-                            else -> Color.Yellow
-                        }, center = Offset(
-                            (3.5f + index) * gameViewModel.state.cellsize,
-                            2.5f * gameViewModel.state.cellsize
-                        ), radius = 0.4f * gameViewModel.state.cellsize
+                    piecePosition = Offset(
+                        (3.5f + index) * gameViewModel.state.cellsize,
+                        2.5f * gameViewModel.state.cellsize
                     )
                 } else if (index == 13 || index == 14) {
-                    drawCircle(
-                        color = when {
-                            (gameViewModel.state.currentPlayer == 2 || !highlight[index]) -> Color.Red
-                            else -> Color.Yellow
-                        }, center = Offset(
-                            (index - 12.5f) * gameViewModel.state.cellsize,
-                            2.5f * gameViewModel.state.cellsize
-                        ), radius = 0.4f * gameViewModel.state.cellsize
+                    piecePosition = Offset(
+                        (index - 12.5f) * gameViewModel.state.cellsize,
+                        2.5f * gameViewModel.state.cellsize
                     )
                 } else {
-                    drawCircle(
-                        color = when {
-                            (gameViewModel.state.currentPlayer == 2 || !highlight[index]) -> Color.Red
-                            else -> Color.Yellow
-                        }, center = Offset(
-                            (12.5f - index) * gameViewModel.state.cellsize,
-                            1.5f * gameViewModel.state.cellsize
-                        ), radius = 0.4f * gameViewModel.state.cellsize
+                    piecePosition = Offset(
+                        (12.5f - index) * gameViewModel.state.cellsize,
+                        1.5f * gameViewModel.state.cellsize
                     )
                 }
-            }
 
-            for ((index, value) in gameViewModel.state.pieces_b.withIndex()) {
-                if (value)//如果有棋子
-                {
-                    if (index in 0..4) {
-                        drawCircle(
-                            color = when {
-                                (gameViewModel.state.currentPlayer == 1 || !highlight[index]) -> Color.Blue
-                                else -> Color.Yellow
-                            }, center = Offset(
-                                (3.5f + index) * gameViewModel.state.cellsize,
-                                0.5f * gameViewModel.state.cellsize
-                            ), radius = 0.4f * gameViewModel.state.cellsize
-                        )
-                    } else if (index == 13 || index == 14) {
-                        drawCircle(
-                            color = when {
-                                (gameViewModel.state.currentPlayer == 1 || !highlight[index]) -> Color.Blue
-                                else -> Color.Yellow
-                            }, center = Offset(
-                                (index - 12.5f) * gameViewModel.state.cellsize,
-                                0.5f * gameViewModel.state.cellsize
-                            ), radius = 0.4f * gameViewModel.state.cellsize
-                        )
-                    } else {
-                        drawCircle(
-                            color = when {
-                                (gameViewModel.state.currentPlayer == 1 || !highlight[index]) -> Color.Blue
-                                else -> Color.Yellow
-                            }, center = Offset(
-                                (12.5f - index) * gameViewModel.state.cellsize,
-                                1.5f * gameViewModel.state.cellsize
-                            ), radius = 0.4f * gameViewModel.state.cellsize
-                        )
-                    }
+                drawCircle(
+                    color = when {
+                        (gameViewModel.state.currentPlayer == 2 || !highlight[index]) -> Color.Red
+                        else -> Color.Yellow
+                    }, center = piecePosition, radius = 0.4f * gameViewModel.state.cellsize
+                )
+            }
+        }
+
+        //绘制蓝色的
+        for ((index, value) in gameViewModel.state.pieces_b.withIndex()) {
+            var piecePosition: Offset
+            if (value)//如果有棋子
+            {
+                if (index in 0..4) {
+                    piecePosition = Offset(
+                        (3.5f + index) * gameViewModel.state.cellsize,
+                        0.5f * gameViewModel.state.cellsize
+                    )
+                } else if (index == 13 || index == 14) {
+                    piecePosition = Offset(
+                        (index - 12.5f) * gameViewModel.state.cellsize,
+                        0.5f * gameViewModel.state.cellsize
+                    )
+
+                } else {
+                    piecePosition = Offset(
+                        (12.5f - index) * gameViewModel.state.cellsize,
+                        1.5f * gameViewModel.state.cellsize
+                    )
                 }
+                drawCircle(
+                    color = when {
+                        (gameViewModel.state.currentPlayer == 1 || !highlight[index]) -> Color.Blue
+                        else -> Color.Yellow
+                    }, center = piecePosition, radius = 0.4f * gameViewModel.state.cellsize
+                )
             }
         }
     }
     if (gameViewModel.state.step == GameStep.REPAINTING) {
-        if (clickindex == 0) {
-            if (gameViewModel.state.currentPlayer == 1 && gameViewModel.state.r_pieces_left != 0) {
-                gameViewModel.setPiecesleft(
-                    gameViewModel.state.r_pieces_left - 1, gameViewModel.state.b_pieces_left
-                )
-            }
-            if (gameViewModel.state.currentPlayer == 2 && gameViewModel.state.b_pieces_left != 0) {
-                gameViewModel.setPiecesleft(
-                    gameViewModel.state.r_pieces_left, gameViewModel.state.b_pieces_left - 1
-                )
-            }
-
-        }
-        if (np == 15) {
+        //棋子出格
+        if (newPosition == 15) {
             gameViewModel.addScore(1, gameViewModel.state.currentPlayer)
         }
-        if (np != 4 && np != 8 && np != 14) {
+        //不是保护格则切换
+        if (newPosition != 4 && newPosition != 8 && newPosition != 14) {
             gameViewModel.nextPlayer()
         }
         if (gameViewModel.state.score_r == 7) {
@@ -592,12 +494,12 @@ fun Pieces(modifier: Modifier = Modifier, gameViewModel: GameViewModel) {
             winner = 2
             showDialog = true
         }
-        np = -1
+        newPosition = -1
         gameViewModel.rollDice(0)
         gameViewModel.setGamestep(GameStep.GAME_START)
     }
+    //若一方到达7分（胜利）
     if (showDialog) {
-        Log.d("GUOGUA", "$showDialog")
         AlertDialog(
             title = { Text("Congratulations") },
             text = { Text(if (winner == 1) "Red wins!!" else "Blue wins!!") },
@@ -614,4 +516,92 @@ fun Pieces(modifier: Modifier = Modifier, gameViewModel: GameViewModel) {
                 }
             })
     }
+}
+
+//高亮（判断是否可以走）
+fun highlightPieces(gameViewModel: GameViewModel): MutableList<Boolean> {
+    val highlight: MutableList<Boolean> = MutableList(15) { false }
+    //避免重复写，先把两个数组存起来
+    val currentPlayerPieces: List<Boolean> =
+        if (gameViewModel.state.currentPlayer == 1) gameViewModel.state.pieces_r else gameViewModel.state.pieces_b
+    val opponentPieces: List<Boolean> =
+        if (gameViewModel.state.currentPlayer == 1) gameViewModel.state.pieces_b else gameViewModel.state.pieces_r
+    //遍历数组
+    for ((index, value) in currentPlayerPieces.withIndex()) {
+        //如果该格有棋子
+        if (value) {
+            // 出格（避免数组越界）
+            if (index + gameViewModel.state.dicenum > 15) {
+                //如果不是正好到15格，跳过
+                continue
+            }
+            else if (index + gameViewModel.state.dicenum == 15) {
+                highlight[index] = true
+            }
+            else if (!currentPlayerPieces[index + gameViewModel.state.dicenum]) {
+                //保护格特殊判定
+                if (!(index + gameViewModel.state.dicenum == 8 && opponentPieces[8])) {
+                    highlight[index] = true
+                }
+
+            }
+        }
+    }
+    return highlight
+}
+
+//移动逻辑
+fun movePiece(clickIndex: Int, newPosition: Int, gameViewModel: GameViewModel) {
+    val currentPlayerPieces: MutableList<Boolean> =
+        if (gameViewModel.state.currentPlayer == 1) gameViewModel.state.pieces_r.toMutableList() else gameViewModel.state.pieces_b.toMutableList()
+    val opponentPieces: MutableList<Boolean> =
+        if (gameViewModel.state.currentPlayer == 1) gameViewModel.state.pieces_b.toMutableList() else gameViewModel.state.pieces_r.toMutableList()
+    var currentPlayerPiecesLeft: Int =
+        if (gameViewModel.state.currentPlayer == 1) gameViewModel.state.r_pieces_left else gameViewModel.state.b_pieces_left
+    var opponentPiecesLeft: Int =
+        if (gameViewModel.state.currentPlayer == 1) gameViewModel.state.b_pieces_left else gameViewModel.state.r_pieces_left
+    //判断是否可以移出棋盘（15格）
+    if (newPosition == 15 && currentPlayerPieces[clickIndex]) {
+        currentPlayerPieces[clickIndex] = false
+    }
+    // 这里无需担心越界，因为前方已经排除newPosition>=15的情况
+    // 计算是否可以移动
+    else if (currentPlayerPieces[clickIndex] && !currentPlayerPieces[newPosition]) {
+        //保护格特殊判定
+        if (!(newPosition == 8 && opponentPieces[8])) {
+            currentPlayerPieces[clickIndex] = false
+            currentPlayerPieces[newPosition] = true
+            if (clickIndex == 0) {
+                if (currentPlayerPiecesLeft != 1) {
+                    currentPlayerPieces[0] = true
+                }
+                currentPlayerPiecesLeft -= 1
+            }
+            //踢人
+            if (newPosition in 5..12 && opponentPieces[newPosition]) {
+                opponentPieces[newPosition] = false
+                opponentPiecesLeft += 1
+                if (!opponentPieces[0]) {
+                    opponentPieces[0] = true
+                }
+            }
+
+        }
+        else{
+            return
+        }
+    }
+    else
+    {
+        return
+    }
+    //设置新的状态（根据当前玩家来判断）
+    if (gameViewModel.state.currentPlayer == 1) {
+        gameViewModel.movePiece(currentPlayerPieces, opponentPieces)
+        gameViewModel.setPiecesleft(currentPlayerPiecesLeft, opponentPiecesLeft)
+    } else {
+        gameViewModel.movePiece(opponentPieces, currentPlayerPieces)
+        gameViewModel.setPiecesleft(opponentPiecesLeft, currentPlayerPiecesLeft)
+    }
+    gameViewModel.setGamestep(GameStep.REPAINTING)
 }
