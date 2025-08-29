@@ -34,3 +34,6 @@ google-services.json
 # Android profiling dumps
 *.hprof
 :contentReference[oaicite:1]{index=1}
+
+key
+key.pub
