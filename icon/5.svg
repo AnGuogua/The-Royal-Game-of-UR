@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="_图层_1" data-name="图层 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #013550;
+      }
+
+      .cls-2 {
+        fill: none;
+        stroke: #000;
+        stroke-miterlimit: 10;
+        stroke-width: 10px;
+      }
+    </style>
+  </defs>
+  <rect class="cls-2" x="29.43" y="32.29" width="278" height="278"/>
+  <polyline class="cls-2" points="29.43 158.22 153.3 158.42 153.3 32.48"/>
+  <polyline class="cls-2" points="29.43 186.38 153.3 186.38 153.3 310.29"/>
+  <polyline class="cls-2" points="180.94 32.29 180.94 158.42 307.43 158.42"/>
+  <polyline class="cls-2" points="307.43 186.38 180.94 186.38 180.94 310.29"/>
+  <circle class="cls-1" cx="91.37" cy="95.45" r="34.64"/>
+  <circle class="cls-1" cx="91.36" cy="248.33" r="34.64"/>
+  <circle class="cls-1" cx="242.43" cy="248.33" r="34.64"/>
+  <rect class="cls-2" x="29.43" y="338.26" width="278" height="278" transform="translate(645.68 308.83) rotate(90)"/>
+  <polyline class="cls-2" points="181.49 338.25 181.3 462.13 307.23 462.13"/>
+  <polyline class="cls-2" points="153.33 338.26 153.33 462.13 29.43 462.13"/>
+  <polyline class="cls-2" points="307.43 489.76 181.3 489.76 181.3 616.26"/>
+  <polyline class="cls-2" points="153.33 616.26 153.33 489.76 29.43 489.76"/>
+  <circle class="cls-1" cx="244.27" cy="400.19" r="34.64"/>
+  <circle class="cls-1" cx="91.38" cy="400.19" r="34.64"/>
+  <circle class="cls-1" cx="91.38" cy="551.25" r="34.64"/>
+  <rect class="cls-2" x="332.22" y="338.26" width="278" height="278" transform="translate(948.47 6.04) rotate(90)"/>
+  <polyline class="cls-2" points="458.15 338.25 458.35 462.13 332.41 462.13"/>
+  <polyline class="cls-2" points="486.32 338.26 486.32 462.13 610.22 462.13"/>
+  <polyline class="cls-2" points="332.22 489.76 458.35 489.76 458.35 616.26"/>
+  <polyline class="cls-2" points="486.32 616.26 486.32 489.76 610.22 489.76"/>
+  <circle class="cls-1" cx="395.38" cy="400.19" r="34.64"/>
+  <circle class="cls-1" cx="548.27" cy="400.19" r="34.64"/>
+  <circle class="cls-1" cx="548.27" cy="551.25" r="34.64"/>
+  <rect class="cls-2" x="331.55" y="32.62" width="278" height="278" transform="translate(941.1 343.24) rotate(-180)"/>
+  <polyline class="cls-2" points="609.55 158.56 485.68 158.75 485.68 32.82"/>
+  <polyline class="cls-2" points="609.55 186.72 485.68 186.72 485.68 310.62"/>
+  <polyline class="cls-2" points="458.04 32.62 458.04 158.75 331.55 158.75"/>
+  <polyline class="cls-2" points="331.55 186.72 458.04 186.72 458.04 310.62"/>
+  <circle class="cls-1" cx="547.61" cy="95.78" r="34.64"/>
+  <circle class="cls-1" cx="547.62" cy="248.67" r="34.64"/>
+  <circle class="cls-1" cx="396.55" cy="248.67" r="34.64"/>
+</svg>
