@@ -1,12 +1,17 @@
 package com.guogua.ur
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,9 +40,13 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
@@ -45,6 +54,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.guogua.ur.ui.theme.TheRoyalGameOfURTheme
 import kotlinx.coroutines.delay
 import kotlin.random.Random
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.drawBehind
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -72,7 +83,7 @@ data class GameState(
     val redScore: Int = 0,              // 红方比分
     val blueScore: Int = 0,              // 蓝方比分
     val currentPlayer: Int = 1,         // 当前玩家（1号/2号）
-    val redPieces: List<Boolean> = List(15) { it == 0 }, // 红棋子位置数组
+    val redPieces: List<Boolean> = List(15) { it == 0 }, // 红棋子位置数组 注意：下标从1开始
     val bluePieces: List<Boolean> = List(15) { it == 0 }, // 蓝棋子位置数组
     val diceNum: Int = 0,
     val cellSize: Float = 0f,
@@ -158,88 +169,96 @@ fun All(modifier: Modifier = Modifier, gameViewModel: GameViewModel = viewModel(
 
 @Composable
 fun GameBoard(modifier: Modifier = Modifier, gameViewModel: GameViewModel) {
-    Canvas(
-        modifier = modifier.aspectRatio(8f / 3f)  // 固定宽高比 8:3
-    ) {
-        val cellSize = size.width / 8f  // 每格宽度
+    var columnSize:IntSize by remember {
+        mutableStateOf(IntSize.Zero)
+    }
+    Column(
+        modifier = Modifier
+            .aspectRatio(8f / 3f)
+            .onGloballyPositioned { layoutCoordinates ->
+                columnSize = layoutCoordinates.size
+            }
+    ){
+        val cellSize = columnSize.width / 8f  // 每格宽度
         val boardHeight = cellSize * 3f   // 总高度
         gameViewModel.setCellSize(cellSize)//写入游戏记录
-        // 绘制格子
-        for (row in 0 until 3) {
-            for (col in 0 until 8) {
-                val color = when {
-                    row == 0 && col == 2 -> Color.Transparent
-                    row == 0 && col == 3 -> Color.Transparent
-                    row == 2 && col == 2 -> Color.Transparent
-                    row == 2 && col == 3 -> Color.Transparent
-                    row == 0 && col == 1 -> Color.Gray
-                    row == 2 && col == 1 -> Color.Gray
-                    row == 0 && col == 7 -> Color.Gray
-                    row == 2 && col == 7 -> Color.Gray
-                    row == 1 && col == 4 -> Color.Gray
-                    else -> Color.LightGray
+
+        val board = listOf(
+            listOf(R.drawable.gameboard_13,R.drawable.gameboard_14,null,null,R.drawable.gameboard_1,R.drawable.gameboard_2,R.drawable.gameboard_3,R.drawable.gameboard_4),
+            listOf(R.drawable.gameboard_12,R.drawable.gameboard_11,R.drawable.gameboard_10,R.drawable.gameboard_9,R.drawable.gameboard_8,R.drawable.gameboard_7,R.drawable.gameboard_6,R.drawable.gameboard_5),
+            listOf(R.drawable.gameboard_13,R.drawable.gameboard_14,null,null,R.drawable.gameboard_1,R.drawable.gameboard_2,R.drawable.gameboard_3,R.drawable.gameboard_4),
+        )
+        board.forEachIndexed{rowID,row->
+            Row(Modifier.weight(1f))
+            {
+                row.forEachIndexed{colID,resID->
+
+
+                    Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .aspectRatio(1f)
+                        .background(if (resID == null) Color.Transparent else Color(245, 199, 127))
+                        .drawBehind {
+                            val strokeWidth = 1.dp.toPx()
+                            val color = Color.Black
+
+                            // 上边
+                            //如果是0行2、3列不画
+                            if (!(rowID == 0 && (colID == 2 || colID == 3))) {
+                                drawLine(
+                                    color = color,
+                                    start = Offset(0f, 0f),
+                                    end = Offset(size.width, 0f),
+                                    strokeWidth = strokeWidth
+                                )
+                            }
+                            // 左边
+                            //0、2行3列不画
+                            if (!(colID == 3 && (rowID == 0 || rowID == 2))) {
+                                drawLine(
+                                    color = color,
+                                    start = Offset(0f, 0f),
+                                    end = Offset(0f, size.height),
+                                    strokeWidth = strokeWidth
+                                )
+                            }
+                            //下边
+                            //第2行画，排除2，3
+                            if (rowID == 2 && colID != 2 && colID != 3) {
+                                drawLine(
+                                    color = color,
+                                    start = Offset(0f, size.height),
+                                    end = Offset(size.width, size.height),
+                                    strokeWidth = strokeWidth
+                                )
+                            }
+                            //右边
+                            if (colID == 7 && !(rowID == 3 && (colID == 0 || colID == 2))) {
+                                drawLine(
+                                    color = color,
+                                    start = Offset(size.width, 0f),
+                                    end = Offset(size.width, size.height),
+                                    strokeWidth = strokeWidth
+                                )
+                            }
+                        }
+                    )
+                    {
+                        if(resID!=null)//有东西
+                        {
+                            Image(
+                                painter = painterResource(id = resID),
+                                modifier = Modifier
+                                    .aspectRatio(1f),
+                                contentScale = ContentScale.Fit,//适合大小
+                                contentDescription = null
+                            )
+                        }
+                    }
                 }
-                drawRect(
-                    color = color,
-                    topLeft = Offset(col * cellSize, row * cellSize),
-                    size = Size(cellSize, cellSize)
-                )
             }
         }
-
-        // 绘制网格线
-        // 水平线
-        for (r in 1..2) {
-            drawLine(
-                color = Color.Black,
-                start = Offset(0f, r * cellSize),
-                end = Offset(size.width, r * cellSize),
-                strokeWidth = 1f.dp.toPx()
-            )
-        }
-        drawLine(
-            color = Color.Black,
-            start = Offset(0f, 0f),
-            end = Offset(2 * cellSize, 0f),
-            strokeWidth = 1f.dp.toPx()
-        )
-        drawLine(
-            color = Color.Black,
-            start = Offset(4 * cellSize, 0f),
-            end = Offset(size.width, 0f),
-            strokeWidth = 1f.dp.toPx()
-        )
-        drawLine(
-            color = Color.Black,
-            start = Offset(0f, boardHeight),
-            end = Offset(2 * cellSize, boardHeight),
-            strokeWidth = 1f.dp.toPx()
-        )
-        drawLine(
-            color = Color.Black,
-            start = Offset(4 * cellSize, boardHeight),
-            end = Offset(size.width, boardHeight),
-            strokeWidth = 1f.dp.toPx()
-        )
-
-
-        // 垂直线 (0-8列)
-        for (c in (0..2) + (4..8)) {
-            drawLine(
-                color = Color.Black,
-                start = Offset(c * cellSize, 0f),
-                end = Offset(c * cellSize, boardHeight),
-                strokeWidth = 1f.dp.toPx()
-            )
-        }
-        drawLine(
-            color = Color.Black,
-            start = Offset(3 * cellSize, cellSize),
-            end = Offset(3 * cellSize, 2f * cellSize),
-            strokeWidth = 1f.dp.toPx()
-        )
-
-
     }
 }
 
@@ -270,8 +289,8 @@ fun Dice(modifier: Modifier = Modifier, gameViewModel: GameViewModel) {
                 withStyle(style = SpanStyle(color = Color.Blue, fontSize = 20.sp)) {
                     append("${gameViewModel.state.blueScore}")
                 }
-
-            })
+            }
+            )
             //摇色子的显示框
             Text(
                 text = gameViewModel.state.diceNum.toString(),
@@ -286,12 +305,13 @@ fun Dice(modifier: Modifier = Modifier, gameViewModel: GameViewModel) {
             Button(
                 onClick = {
                     if (gameViewModel.state.step == GameStep.GAME_START) {
-                        var rn = 0
+                        var randomNumber = 0
                         for (i in 0..3) {
                             val r = Random.nextInt(2)
-                            rn += r
+                            randomNumber += r
                         }
-                        gameViewModel.rollDice(rn)
+                        gameViewModel.rollDice(randomNumber)
+                        Log.d("GAMETEST","[ROLL]currentPlayer:${gameViewModel.state.currentPlayer} diceNum:$randomNumber")
                         gameViewModel.setGameStep(GameStep.DICE_ROLLED)
                     }
 
@@ -336,9 +356,6 @@ fun Dice(modifier: Modifier = Modifier, gameViewModel: GameViewModel) {
 @Composable
 fun Pieces(modifier: Modifier = Modifier, gameViewModel: GameViewModel) {
     var highlight: MutableList<Boolean> = MutableList(15) { false }
-    var clickindex by remember {
-        mutableIntStateOf(-1)
-    }
     var newPosition: Int by remember {
         mutableIntStateOf(-1)
     }
@@ -346,6 +363,10 @@ fun Pieces(modifier: Modifier = Modifier, gameViewModel: GameViewModel) {
     var winner by remember {
         mutableIntStateOf(1)
     }
+    var columnSize:IntSize by remember {
+        mutableStateOf(IntSize.Zero)
+    }
+
     //运算高亮部分
     if (gameViewModel.state.step == GameStep.DICE_ROLLED) {
         highlight = highlightPieces(gameViewModel)
@@ -354,124 +375,76 @@ fun Pieces(modifier: Modifier = Modifier, gameViewModel: GameViewModel) {
         if (highlight.all { !it } || gameViewModel.state.diceNum == 0) {
             newPosition = -1
             gameViewModel.setGameStep(GameStep.NO_MOVE)
-            return
         }
 
     }
 
-    Canvas(modifier = modifier
-        .aspectRatio(8f / 3f)
-        .pointerInput(Unit) {
-            detectTapGestures { offset ->
-                if (gameViewModel.state.step != GameStep.DICE_ROLLED) {
-                    return@detectTapGestures
-                }
-                val col = (offset.x / gameViewModel.state.cellSize).toInt()
-                val row = (offset.y / gameViewModel.state.cellSize).toInt()
-                //转换坐标
-                if (gameViewModel.state.currentPlayer == 1 && row != 0) {
-                    if (row == 1) {
-                        clickindex = 12 - col
-                    }
-                    if (row == 2) {
-                        if (col >= 3) {
-                            clickindex = col - 3
-                        }
-
-                        if (col <= 1) {
-                            clickindex = col + 13
-                        }
-                    }
-                }
-                if (gameViewModel.state.currentPlayer == 2 && row != 2) {
-
-                    if (row == 1) {
-                        clickindex = 12 - col
-                    }
-                    if (row == 0) {
-                        if (col >= 3) {
-                            clickindex = col - 3
-                        }
-                        if (col <= 1) {
-                            clickindex = col + 13
-                        }
-                    }
-                }
-
-                //计算移动
-                newPosition = clickindex + gameViewModel.state.diceNum
-                if (newPosition > 15) {
-                    return@detectTapGestures
-                } else {
-                    movePiece(clickindex, newPosition, gameViewModel)
-                }
-
+    Column(
+        modifier = Modifier
+            .aspectRatio(8f / 3f)
+            .onGloballyPositioned { layoutCoordinates ->
+                columnSize = layoutCoordinates.size
             }
-        }
-
     ) {
-        //绘制红色的
-        for ((index, value) in gameViewModel.state.redPieces.withIndex()) {
-            var piecePosition: Offset
-            if (value)//如果有棋子
+        val piece: List<List<Int>> = listOf(
+            listOf(13, 14, -1, 0, 1, 2, 3, 4),
+            listOf(12, 11, 10, 9, 8, 7, 6, 5),
+            listOf(13, 14, -1, 0, 1, 2, 3, 4)
+        )
+        piece.forEachIndexed {rowID, row ->
+            Row(Modifier.weight(1f))
             {
-                piecePosition = when (index) {
-                    in 0..4 -> Offset(
-                        (3.5f + index) * gameViewModel.state.cellSize,
-                        2.5f * gameViewModel.state.cellSize
+                row.forEach { boardID ->
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .aspectRatio(1f)
+                            .background(Color.Transparent)
+                            .clickable (
+                                indication = null, //  关闭水波纹
+                                interactionSource = remember { MutableInteractionSource() }// 必须传，否则会报错
+                            )
+                            {
+                                //满足的条件：可以被移动+是我方棋子
+                                if(highlight[boardID]&&((gameViewModel.state.currentPlayer==1&&rowID in 1..2)||(gameViewModel.state.currentPlayer==2&&rowID in 0..1)))
+                                {
+                                    newPosition = boardID+gameViewModel.state.diceNum
+                                    movePiece(boardID,gameViewModel)
+                                }
+                            }
                     )
+                    {
+                        if(boardID == -1)
+                        {
+                            return@Box
+                        }
+                        var resID = when{
+                            rowID in 1..2 && gameViewModel.state.redPieces[boardID] -> R.drawable.piece_red
+                            rowID in 0..1 && gameViewModel.state.bluePieces[boardID] ->R.drawable.piece_blue
+                            else->null
+                        }
+                        if(resID!=null)
+                        {
+                            resID = when
+                            {
+                                gameViewModel.state.currentPlayer == 1&&resID == R.drawable.piece_red&&highlight[boardID]->R.drawable.piece_red_highlight
+                                gameViewModel.state.currentPlayer == 2&&resID == R.drawable.piece_blue&&highlight[boardID]->R.drawable.piece_blue_highlight
+                                else->resID
+                            }
+                            Log.d("GAMETEST","[PAINT]currentPlayer:${gameViewModel.state.currentPlayer} rowID:$rowID boardID:$boardID")
+                            Image(
+                                painter = painterResource(id = resID),
+                                modifier = Modifier
+                                    .aspectRatio(1f),
+                                contentScale = ContentScale.Fit,//适合大小
+                                contentDescription = null
+                            )
 
-                    13, 14 -> Offset(
-                        (index - 12.5f) * gameViewModel.state.cellSize,
-                        2.5f * gameViewModel.state.cellSize
-                    )
-
-                    else -> Offset(
-                        (12.5f - index) * gameViewModel.state.cellSize,
-                        1.5f * gameViewModel.state.cellSize
-                    )
-
+                        }
+                    }
                 }
-
-                drawCircle(
-                    color = when {
-                        (gameViewModel.state.currentPlayer == 2 || !highlight[index]) -> Color.Red
-                        else -> Color.Yellow
-                    }, center = piecePosition, radius = 0.4f * gameViewModel.state.cellSize
-                )
             }
-        }
 
-        //绘制蓝色的
-        for ((index, value) in gameViewModel.state.bluePieces.withIndex()) {
-            var piecePosition: Offset
-            if (value)//如果有棋子
-            {
-                piecePosition = when (index) {
-                    in 0..4 -> Offset(
-                            (3.5f + index) * gameViewModel.state.cellSize,
-                            0.5f * gameViewModel.state.cellSize
-                        )
-
-                    13, 14 -> Offset(
-                        (index - 12.5f) * gameViewModel.state.cellSize,
-                        0.5f * gameViewModel.state.cellSize
-                    )
-
-
-                    else -> Offset(
-                        (12.5f - index) * gameViewModel.state.cellSize,
-                        1.5f * gameViewModel.state.cellSize
-                    )
-                }
-
-                drawCircle(
-                    color = when {
-                        (gameViewModel.state.currentPlayer == 1 || !highlight[index]) -> Color.Blue
-                        else -> Color.Yellow
-                    }, center = piecePosition, radius = 0.4f * gameViewModel.state.cellSize
-                )
-            }
         }
     }
     if (gameViewModel.state.step == GameStep.REPAINTING) {
@@ -483,6 +456,7 @@ fun Pieces(modifier: Modifier = Modifier, gameViewModel: GameViewModel) {
         if (newPosition != 4 && newPosition != 8 && newPosition != 14) {
             gameViewModel.nextPlayer()
         }
+        //获胜
         if (gameViewModel.state.redScore == 7) {
             winner = 1
             showDialog = true
@@ -505,6 +479,7 @@ fun Pieces(modifier: Modifier = Modifier, gameViewModel: GameViewModel) {
                 Button(
                     onClick = {
                         gameViewModel.resetGame()
+                        Log.d("GAMETEST","[RESET]")
                         showDialog = false
                     }
                 )
@@ -538,15 +513,16 @@ fun highlightPieces(gameViewModel: GameViewModel): MutableList<Boolean> {
                 if (!(index + gameViewModel.state.diceNum == 8 && opponentPieces[8])) {
                     highlight[index] = true
                 }
-
             }
         }
     }
+    Log.d("GAMETEST","[HIGHLIGHT]currentPlayer:${gameViewModel.state.currentPlayer} highlight:$highlight")
     return highlight
 }
 
 //移动逻辑
-fun movePiece(clickIndex: Int, newPosition: Int, gameViewModel: GameViewModel) {
+fun movePiece(clickIndex: Int, gameViewModel: GameViewModel) {
+    val newPosition:Int = clickIndex+gameViewModel.state.diceNum
     val currentPlayerPieces: MutableList<Boolean> =
         if (gameViewModel.state.currentPlayer == 1) gameViewModel.state.redPieces.toMutableList() else gameViewModel.state.bluePieces.toMutableList()
     val opponentPieces: MutableList<Boolean> =
@@ -560,32 +536,25 @@ fun movePiece(clickIndex: Int, newPosition: Int, gameViewModel: GameViewModel) {
         currentPlayerPieces[clickIndex] = false
     }
     // 这里无需担心越界，因为前方已经排除newPosition>=15的情况
-    // 计算是否可以移动
-    else if (currentPlayerPieces[clickIndex] && !currentPlayerPieces[newPosition]) {
-        //保护格特殊判定
-        if (!(newPosition == 8 && opponentPieces[8])) {
-            currentPlayerPieces[clickIndex] = false
-            currentPlayerPieces[newPosition] = true
-            if (clickIndex == 0) {
-                if (currentPlayerPiecesLeft != 1) {
-                    currentPlayerPieces[0] = true
-                }
-                currentPlayerPiecesLeft -= 1
+    // 且已经判定过是否可以移动
+    else {
+        currentPlayerPieces[clickIndex] = false
+        currentPlayerPieces[newPosition] = true
+        if (clickIndex == 0) {
+            if (currentPlayerPiecesLeft != 1) {
+                currentPlayerPieces[0] = true
             }
-            //踢人
-            if (newPosition in 5..12 && opponentPieces[newPosition]) {
-                opponentPieces[newPosition] = false
-                opponentPiecesLeft += 1
-                if (!opponentPieces[0]) {
-                    opponentPieces[0] = true
-                }
-            }
-
-        } else {
-            return
+            currentPlayerPiecesLeft -= 1
+            Log.d("GAMETEST","[MOVEPIECE]currentPlayer:${gameViewModel.state.currentPlayer} piecesLeft:$currentPlayerPiecesLeft")
         }
-    } else {
-        return
+        //踢人
+        if (newPosition in 5..12 && opponentPieces[newPosition]) {
+            opponentPieces[newPosition] = false
+            opponentPiecesLeft += 1
+            if (!opponentPieces[0]) {
+                opponentPieces[0] = true
+            }
+        }
     }
     //设置新的状态（根据当前玩家来判断）
     if (gameViewModel.state.currentPlayer == 1) {
@@ -595,5 +564,6 @@ fun movePiece(clickIndex: Int, newPosition: Int, gameViewModel: GameViewModel) {
         gameViewModel.movePiece(opponentPieces, currentPlayerPieces)
         gameViewModel.setPiecesLeft(opponentPiecesLeft, currentPlayerPiecesLeft)
     }
+    Log.d("GAMETEST","[MOVEPIECE]currentPlayer:${gameViewModel.state.currentPlayer} Piece $clickIndex move to $newPosition  Array:$currentPlayerPieces")
     gameViewModel.setGameStep(GameStep.REPAINTING)
 }

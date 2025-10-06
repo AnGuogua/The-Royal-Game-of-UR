@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="_图层_1" data-name="图层 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #666;
+      }
+
+      .cls-2 {
+        fill: #802e1f;
+      }
+    </style>
+  </defs>
+  <circle class="cls-1" cx="319.94" cy="320" r="256"/>
+  <circle class="cls-2" cx="196.75" cy="197.12" r="44.32"/>
+  <circle class="cls-2" cx="442.95" cy="197.12" r="44.32"/>
+  <circle class="cls-2" cx="442.95" cy="443.18" r="44.32"/>
+  <circle class="cls-2" cx="319.94" cy="319.75" r="44.32"/>
+  <circle class="cls-2" cx="196.75" cy="443.3" r="44.32"/>
+</svg>
